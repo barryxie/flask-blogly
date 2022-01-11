@@ -1,5 +1,8 @@
 """Models for Blogly."""
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import backref
+from sqlalchemy.sql.schema import ForeignKey
+import datetime
 
 db = SQLAlchemy()
 
@@ -26,3 +29,16 @@ class User(db.Model):
 
     def full_name(self):
         return f"{self.first_name} {self.last_name}"
+
+class Post(db.Model):
+    __tablename__ = "posts"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    title = db.Column(db.Text, nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_a = db.Column(db.DateTime, nullable=False,default=datetime.datetime.now)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+
+    user = db.relationship('User', backref=backref('posts', cascade="all, delete-orphan"))
+    
+
