@@ -40,13 +40,19 @@ class Post(db.Model):
 
     user = db.relationship('User', backref=backref('posts', cascade="all, delete-orphan"))
 
-    tags = db.relationship('Tag', secondary='posttags', backref='posts')
+    
 
 class Tag(db.Model):
     __tablename__ = "tags"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.Text, nullable=False, unique=True) 
+
+    posts = db.relationship('Post',secondary="posttags",
+        # cascade="all,delete",
+    backref="tags",
+    )
+    
 
 class PostTag(db.Model):
     __tablename__ = "posttags" 

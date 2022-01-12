@@ -6,6 +6,7 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///blogly'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
+app.config['SECRET_KEY'] = 'ihaveasecret'
 
 connect_db(app)
 db.create_all()
@@ -75,17 +76,22 @@ def delele_user(user_id):
 @app.route("/users/<int:user_id>/post/new")
 def create_new_post(user_id):
     user = User.query.get_or_404(user_id)
-    return render_template('post.html', user=user) 
+    tags = Tag.query.all()
+    return render_template('post.html', user=user, tags=tags) 
 
 
 @app.route("/users/<int:user_id>/post/new", methods=['POST'])
 def add_new_post(user_id):
     title = request.form['title']
     content = request.form['content']
-    new_post = Post(title=title, content=content, user_id=user_id)
-    db.session.add(new_post)
+    post = Post(title=title, content=content, user_id=user_id)
+    tag_ids = [int(num) for num in request.form.getlist('tags')]
+    post.tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+    
+
+    db.session.add(post)
     db.session.commit()
-    return redirect(f'/posts/{new_post.id}') 
+    return redirect(f'/posts/{post.id}') 
 
 @app.route("/posts/<int:post_id>")
 def show_post(post_id):
@@ -95,7 +101,8 @@ def show_post(post_id):
 @app.route("/posts/<int:post_id>/edit")
 def show_edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    return render_template('edit_post.html',post=post)
+    tags = Tag.query.all()
+    return render_template('edit_post.html',post=post, tags=tags)
 
 @app.route("/posts/<int:post_id>/edit", methods=['POST'])
 def create_edit_post(post_id):
@@ -103,6 +110,9 @@ def create_edit_post(post_id):
     post.title = request.form['title']
     post.content= request.form['content']
 
+    tag_ids = [int(num) for num in request.form.getlist('tags')]
+    post.tags = Tag.query.filter(Tag.id.in_(tag_ids)).all()
+    
     db.session.add(post)
     db.session.commit()
 
@@ -126,6 +136,7 @@ def tags_list():
 @app.route("/tags/<int:tag_id>")
 def tags_detail(tag_id):
     tag = Tag.query.get_or_404(tag_id)
+    
     return render_template('tag.html', tag = tag)     
 
 @app.route("/tags/new")
@@ -137,11 +148,15 @@ def create_tags_form():
 def create_tags():
     name = request.form['name']
     tag = Tag(name=name)
-
-    db.session.add(tag)
-    db.session.commit()
-
-    return redirect('/tags')
+    try:
+        db.session.add(tag)
+        db.session.commit()
+        flash(f"Tag '{tag.name}' added.")
+        return redirect('/tags')
+    except:
+        db.session.rollback()
+        flash(f"Tag '{tag.name}' already exit.")
+        return redirect('/tags/new')    
 
 @app.route("/tags/<int:tag_id>/edit")
 def edit_tags_form(tag_id):
