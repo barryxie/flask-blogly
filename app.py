@@ -1,8 +1,6 @@
 """Blogly application."""
-
-from types import MethodDescriptorType
-from flask import Flask,request, render_template, redirect
-from models import db, connect_db, User, Post
+from flask import Flask, request, redirect, render_template, flash
+from models import db, connect_db, User, Post, Tag
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql:///blogly'
@@ -117,7 +115,59 @@ def delete_post(post_id):
     db.session.delete(post)
     db.session.commit()
 
-    return redirect(f'/users/{post.user_id}')           
+    return redirect(f'/users/{post.user_id}')   
+
+
+@app.route("/tags")
+def tags_list():
+    tags = Tag.query.all()
+    return render_template('tags.html', tags=tags) 
+
+@app.route("/tags/<int:tag_id>")
+def tags_detail(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    return render_template('tag.html', tag = tag)     
+
+@app.route("/tags/new")
+def create_tags_form():
+    return render_template('new_tag.html') 
+
+
+@app.route("/tags/new", methods=['POST'])
+def create_tags():
+    name = request.form['name']
+    tag = Tag(name=name)
+
+    db.session.add(tag)
+    db.session.commit()
+
+    return redirect('/tags')
+
+@app.route("/tags/<int:tag_id>/edit")
+def edit_tags_form(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    return render_template('edit_tag.html', tag = tag)   
+
+
+@app.route("/tags/<int:tag_id>/edit", methods=['POST'])
+def edit_tags(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    tag.name = request.form['name']
+
+    db.session.add(tag)
+    db.session.commit()
+
+    return redirect(f'/tags/{tag.id}')    
+
+
+@app.route("/tags/<int:tag_id>/delete", methods=['POST'])
+def delete_tag(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+
+    db.session.delete(tag)
+    db.session.commit()
+
+    return redirect('/tags')                                
 
 
 
